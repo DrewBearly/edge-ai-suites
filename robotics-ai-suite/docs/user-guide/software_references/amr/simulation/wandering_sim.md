@@ -11,12 +11,44 @@ It continuously updates an occupancy map, chooses unexplored frontiers, and
 sends navigation goals through Nav2 while avoiding obstacles identified by the
 perception pipeline.
 
+```{mermaid}
+flowchart TD
+    subgraph Sim["Gazebo Simulation"]
+        Waffle["TurtleBot3 Waffle RGB-D Model"]
+        Bridge["ros_gz_bridge\n(Generic RGB-D & Base Bridge)"]
+        Waffle --> Bridge
+    end
+
+    subgraph Perception["Perception & SLAM"]
+        Bridge -->|"/scan"| SLAM["SLAM / RTAB-Map\n(Mapping & Localization)"]
+        Bridge -->|"/camera/depth/color/points"| Fusion["adbscan_sensor_fusion\n(Ground Removal & Voxel Downsampling)"]
+        Fusion -->|"/adbscan/points"| ADBSCAN["ADBSCAN Node\n(3D Clustering)"]
+    end
+
+    subgraph Nav["Nav2 Navigation Stack"]
+        ADBSCAN -->|"/obstacle_array"| Costmaps["Costmaps\n(ADBScanLayer + Obstacle Layers)"]
+        Bridge -->|"/scan"| Costmaps
+        SLAM -->|"/map & TF"| Nav2["Nav2 Planner & Controller\n(NavigateToPose Action Server)"]
+        Costmaps --> Nav2
+    end
+
+    subgraph App["Wandering Application"]
+        Costmaps -->|"/global_costmap/costmap"| Mapper["wandering_app\n(Frontier Exploration)"]
+        Mapper -->|"NavigateToPose Goal"| Nav2
+    end
+
+    Nav2 -->|"/cmd_vel"| Bridge
+    Bridge --> Waffle
+```
+
 ## Components
 
-- RTAB-Map creates and updates the environment map.
-- Nav2 plans and executes movement toward exploration goals.
-- `WanderingMapper` selects unexplored frontiers.
-- `GoalCatcher` sends `NavigateToPose` goals to Nav2.
+- `adbscan_sensor_fusion` time-synchronizes and filters 2D LiDAR and 3D depth-camera point clouds.
+- `adbscan_ros2` identifies and clusters 3D obstacle objects from the fused point cloud.
+- `nav2_adbscan_layer` marks object-sized ADBSCAN obstacle clusters into Nav2 local and global costmaps.
+- RTAB-Map (or SLAM Toolbox) creates and updates the environment map and robot localization.
+- Nav2 plans and executes movement toward exploration goals using enhanced costmaps.
+- `wandering_app` (`WanderingMapper` and `GoalCatcher`) selects unvisited frontiers and dispatches `NavigateToPose` goals.
 
 ## Source Code
 
@@ -26,7 +58,7 @@ is available with the Robotics AI Suite.
 ## Run the Gazebo Simulation
 
 This tutorial shows a TurtleBot3 Waffle robot performing autonomous mapping of
-the TurtleBot3 robot world in the Gazebo simulation.
+the TurtleBot3 robot world in Gazebo simulation using a composed RGB-D sensor payload.
 For more information about TurtleBot3 Waffle robot, refer to
 [TurtleBot3 documentation](https://emanual.robotis.com/docs/en/platform/turtlebot3/simulation/#gazebo-simulation).
 
@@ -40,14 +72,15 @@ Complete the [Getting Started](../../../platform_foundation/getting_started.md) 
    [Getting Started](../../../platform_foundation/getting_started.md) guide to enable the GPU for
    simulation. This step improves Gazebo simulation performance.
 
-2. Install dependencies:
+2. Install the `wandering` metapackage:
 
    <!--hide_directive::::{tab-set}hide_directive-->
    <!--hide_directive:::{tab-item}hide_directive--> **Jazzy**
    <!--hide_directive:sync: jazzyhide_directive-->
 
    ```bash
-   sudo apt-get install ros-jazzy-rtabmap-ros
+   sudo apt update
+   sudo apt install ros-jazzy-wandering
    ```
 
    <!--hide_directive:::hide_directive-->
@@ -55,59 +88,46 @@ Complete the [Getting Started](../../../platform_foundation/getting_started.md) 
    <!--hide_directive:sync: humblehide_directive-->
 
    ```bash
-   sudo apt-get install ros-humble-rtabmap-ros
+   sudo apt update
+   sudo apt install ros-humble-wandering
    ```
 
    <!--hide_directive:::hide_directive-->
    <!--hide_directive::::hide_directive-->
 
-3. Install the Wandering Gazebo tutorial:
-
-   <!--hide_directive::::{tab-set}hide_directive-->
-   <!--hide_directive:::{tab-item}hide_directive--> **Jazzy**
-   <!--hide_directive:sync: jazzyhide_directive-->
+3. Execute the launch command below to start the simulation:
 
    ```bash
-   sudo apt-get install ros-jazzy-wandering-gazebo-tutorial
-   ```
-
-   <!--hide_directive:::hide_directive-->
-   <!--hide_directive:::{tab-item}hide_directive--> **Humble**
-   <!--hide_directive:sync: humblehide_directive-->
-
-   ```bash
-   sudo apt-get install ros-humble-wandering-gazebo-tutorial
-   ```
-
-   <!--hide_directive:::hide_directive-->
-   <!--hide_directive::::hide_directive-->
-
-4. Execute the command below to start the tutorial:
-
-   ```bash
-   ros2 launch wandering_gazebo_tutorial wandering_gazebo.launch.py
+   ros2 launch wandering_bringup wandering_sim.launch.py gui:=true
    ```
 
    **Expected output:**
 
-   Gazebo client, rviz2 and RTAB-Map applications start and the robot
-   starts wandering inside the simulation. See the simulation
+   Gazebo client, RViz2, and the `wandering` nodes start, and the robot
+   begins exploring and mapping inside the simulation. See the simulation
    snapshot:
 
    ![gazebo_waffle](images/gazebo_waffle.png)
 
-   Rviz2 shows the mapped area and the position of the robot:
+   RViz2 shows the mapped area and the position of the robot:
 
    ![wandering-gazebo-rviz2](images/wandering-gazebo-rviz2.png)
 
-   To enhance performance, set the real-time update to 0 by following
-   the steps below:
+   **Simulation options:**
 
-   1. In Gazebo's left panel, go to the **World** Tab, and click
-      **Physics**.
-   2. Change the real time update rate to 0.
+   - **Select SLAM backend:** To switch from visual RGB-D SLAM (RTAB-Map) to 2D LiDAR SLAM (SLAM Toolbox), add `slam_backend:=slam_toolbox`:
 
-5. To conclude, use ``Ctrl-c`` in the terminal where you are executing
+     ```bash
+     ros2 launch wandering_bringup wandering_sim.launch.py slam_backend:=slam_toolbox gui:=true
+     ```
+
+   - **Headless mode:** To run without opening the Gazebo GUI, set `gui:=false`:
+
+     ```bash
+     ros2 launch wandering_bringup wandering_sim.launch.py gui:=false
+     ```
+
+4. To conclude, use ``Ctrl-c`` in the terminal where you are executing
    the command.
 
 ### Troubleshooting
