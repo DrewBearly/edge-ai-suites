@@ -7,7 +7,7 @@ service, Compressor service, and the UI service.
 
 Before you begin, ensure the following:
 
-- **System Requirements:** Verify that your system meets the [minimum requirements](./system-requirements.md).
+- **System Requirements:** Verify that your system meets the [minimum requirements](./get-started/system-requirements.md).
 - **GPU Driver Installed:** This guide assumes that the target machine already has the Intel GPU driver. Otherwise, follow the official [Installing Packages from the Intel PPA](https://dgpu-docs.intel.com/installation-guides/installing-packages-from-the-intel-ppa.html) guide.
 - **Docker Installed:** Install Docker by following [Get Docker](https://docs.docker.com/get-docker/).
 - **Core command-line tools:** All services — including the MCP server — run as containers, so the host only needs `git` to clone the repo and `curl` / `jq` for the setup script and health checks:
@@ -220,7 +220,7 @@ openclaw onboard --install-daemon
 ```
 
 | Wizard Step | Selection |
-|---|---|
+| --- | --- |
 | Onboarding mode | **QuickStart** |
 | Model / auth provider | **Skip for now** |
 | Filter models by provider | **All providers** |
@@ -644,3 +644,12 @@ Skills provide your tools. When you need one, check its `SKILL.md`. Keep local n
 For any user question, query, summarization, overview, or comparison, you must use the knowledgebase skill!
 Do not answer questions by searching for files!
 ```
+
+<!--hide_directive
+:::{toctree}
+:hidden:
+
+./get-started/system-requirements.md
+
+:::
+hide_directive-->
