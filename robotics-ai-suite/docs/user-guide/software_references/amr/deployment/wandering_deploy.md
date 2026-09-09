@@ -8,7 +8,7 @@ The pipeline combines Intel® RealSense™ depth camera sensing, RTAB-Map visual
 
 The Panther Lake onboard compute board handles on-robot perception, SLAM, costmap marking, and autonomous navigation:
 
-```mermaid
+```{mermaid}
 flowchart TD
     subgraph Hardware["Onboard Hardware (Clearpath Jackal + Panther Lake)"]
         RS["Intel® RealSense™ Camera\n(RGB-D PointCloud2 & Depth)"]

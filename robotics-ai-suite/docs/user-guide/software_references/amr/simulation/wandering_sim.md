@@ -8,7 +8,7 @@ In this software reference, you'll simulate the `wandering` pipeline in Gazebo. 
 
 The simulation pipeline connects sensor streaming, perception, SLAM, costmap layer integration, navigation, and autonomous exploration:
 
-```mermaid
+```{mermaid}
 flowchart TD
     subgraph Sensors["Sensors & Input"]
         RGBD["Gazebo RGB-D Camera\n(/camera/... /depth/points)"]
