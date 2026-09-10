@@ -158,15 +158,17 @@ When the Jackal robot is equipped with a 360-degree 3D LiDAR (such as a Velodyne
 - The Velodyne preset intentionally does **not** append planar `/scan` points into this 3D point cloud; this avoids planar scan returns bridging distinct 3D objects into single oversized clusters. The 2D `/scan` topic remains independently active and continuously fed to RTAB-Map SLAM, standard Nav2 obstacle clearing layers, and collision monitoring.
 - `adbscan_ros2` clusters the filtered 360-degree cloud in 3D mode, publishing detected object-sized 3D obstacles around the robot to `/obstacle_array`.
 
-**Step 1: Identify the 3D LiDAR topic and frame**
+**Step 1: Identify and verify the streaming 3D LiDAR topic and frame**
 
-Check that your robot's LiDAR driver service is streaming `sensor_msgs/msg/PointCloud2`:
+Common Clearpath topic names for 3D LiDAR point clouds include `/sensors/lidar3d_0/points` or `/velodyne_points`. Check that your robot's LiDAR driver service is actively streaming data by monitoring the publication rate:
 
 ```bash
-ros2 topic list -t | grep sensor_msgs/msg/PointCloud2
+ros2 topic hz /sensors/lidar3d_0/points
+# or if using /velodyne_points:
+ros2 topic hz /velodyne_points
 ```
 
-Common Clearpath topic names include `/sensors/lidar3d_0/points` or `/velodyne_points`. Confirm that the header frame resolves to `base_link` through the robot's namespaced TF tree:
+Confirm that the header frame resolves to `base_link` through the robot's namespaced TF tree:
 
 ```bash
 ros2 topic echo --once /sensors/lidar3d_0/points header
